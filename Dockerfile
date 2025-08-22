@@ -28,6 +28,7 @@ RUN pip install -i ${PIP_INDEX_URL} --no-cache-dir -r requirements.txt \
     && chmod +x /harvester/entrypoint.sh \
     && groupadd -r harvester \
     && useradd -r -g harvester harvester \
+    && cp examples/config-full.yaml config.yaml \
     && chown -R harvester:harvester /harvester
 
 # Switch to non-root user
