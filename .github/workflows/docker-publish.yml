@@ -41,9 +41,6 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} # 设置镜像名称，如 ghcr.io/your-user/your-repo
-          
-          # ⚠️ 关键点：'tags:' 后必须跟一个管道符 '|'，表示这是一个多行字符串。
-          #    并且下面的每一行 'type=' 都必须比 'tags:' 这一行有更深的缩进！（通常是2个空格）
           tags: |
             type=schedule                    # 启用时间表触发的构建标签
             type=ref,event=branch            # 推送到分支时，基于分支名生成标签 (如 main -> main)
@@ -52,9 +49,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}} # 当 Git Tag 为 v1.0.0 时，生成 1.0 标签
             type=sha,format=long             # 生成完整的 Git Commit SHA 作为标签
             type=sha,format=short            # 生成短格式的 Git Commit SHA 作为标签
-            # 只有当推送到仓库的默认分支 (例如 'main' 或 'master') 时才打 'latest' 标签
             type=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.ref == 'refs/heads/main' }}
-          
           labels: ${{ steps.meta.outputs.labels }} # 从 metadata action 中获取并设置 Docker 标签（如 org.opencontainers.image.source 等）
 
       - name: Set up Docker Buildx # 步骤4: 设置 Docker Buildx，用于多平台构建 (如 AMD64, ARM64)
