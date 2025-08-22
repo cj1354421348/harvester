@@ -8,7 +8,7 @@ global:
   # GitHub credentials settings
   github_credentials:
     sessions:
-      - "ASDagv7VeSFoNu2AasgWjrqfPbz5Ck2PSAmAArjrDR9aPx-T" # Replace with your GitHub session token
+      - "" # Replace with your GitHub session token
     # Load balancing strategy: round_robin or random
     strategy: "round_robin"
 

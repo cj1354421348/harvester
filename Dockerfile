@@ -24,6 +24,9 @@ WORKDIR /harvester
 
 # Copy all files and setup in one layer
 COPY . /harvester/
+RUN apt update && \
+    apt install -y nano && \
+    rm -rf /var/lib/apt/lists/*
 RUN pip install -i ${PIP_INDEX_URL} --no-cache-dir -r requirements.txt \
     && chmod +x /harvester/entrypoint.sh \
     && groupadd -r harvester \
