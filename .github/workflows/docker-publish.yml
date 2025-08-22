@@ -32,24 +32,21 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }} # GitHub Actions 提供当前触发工作流的用户/机器人名称
           password: ${{ secrets.GITHUB_TOKEN }} # GitHub Actions 提供的自动生成令牌，有 push 到 GHCR 的权限
-
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: | # <-- 这里是关键！添加了这个管道符号 "|"
+          tags: | # <--- 再次确认这里有这个管道符号 "|"
+            # 这些行必须有相同的、比 "tags:" 这一行更深的缩进！
             type=schedule
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}} # 例如 "v1.0.0" -> "1.0.0"
-            type=semver,pattern={{major}}.{{minor}} # 例如 "v1.0.0" -> "1.0"
-            type=sha,format=long # 包含完整的 commit SHA
-            type=sha,format=short # 包含短 commit SHA
-            type=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.ref == 'refs/heads/main' }} # main 分支打 latest 标签
-          # context: workflow # 这行一般不需要，metadata action的context默认就是workflow
-          # github-token: *** # 这行也不需要，action会默认使用workflow的GITHUB_TOKEN
-
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=long
+            type=sha,format=short
+            type=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.ref == 'refs/heads/main' }}
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
