@@ -38,7 +38,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
+          tags: | # <-- 这里是关键！添加了这个管道符号 "|"
             type=schedule
             type=ref,event=branch
             type=ref,event=pr
@@ -47,6 +47,8 @@ jobs:
             type=sha,format=long # 包含完整的 commit SHA
             type=sha,format=short # 包含短 commit SHA
             type=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.ref == 'refs/heads/main' }} # main 分支打 latest 标签
+          # context: workflow # 这行一般不需要，metadata action的context默认就是workflow
+          # github-token: *** # 这行也不需要，action会默认使用workflow的GITHUB_TOKEN
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
