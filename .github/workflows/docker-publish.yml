@@ -1,73 +1,66 @@
-name: Build Docker Image
+name: Build Docker Image # 工作流名称
 
 on:
   push:
-    tags: # 只在推送到标签时触发
-      - "*" # 捕获所有标签，例如 v1.0, v1.0-beta, etc.
+    branches: [ "main" ] # 当推送到 main 分支时触发
+    tags: # 只在推送到 Git 标签时触发此工作流
+      - "*" # 匹配所有标签，例如 v1.0, v1.0-beta 等
 
 jobs:
   build_docker_image:
-    name: Build Docker Image
-    runs-on: ubuntu-latest
+    name: Build Docker Image # 作业名称
+    runs-on: ubuntu-latest # 在 Ubuntu 虚拟机上运行此作业
     permissions:
-      packages: write # 允许将镜像推送到 GHCR
-      contents: read  # 允许检出代码
+      packages: write # 授予写入 GitHub Packages (GHCR 属于 GitHub Packages) 的权限
+      contents: read  # 授予读取仓库内容的权限 (用于 actions/checkout)
+
     steps:
-      - name: Checkout repository
+      - name: Checkout repository # 步骤：检出仓库代码
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
+      - name: Set up Docker Buildx # 步骤：设置 Docker Buildx，用于构建多平台镜像
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Docker Hub
-        # 仅在您需要将镜像推送到 Docker Hub 时使用此步骤
-        # 如果只推送到 GHCR，可以移除
+      - name: Log in to GitHub Container Registry (GHCR) # 步骤：登录到 GHCR
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ghcr.io # 指定注册表为 GHCR
+          username: ${{ github.actor }} # 使用触发工作流的 GitHub 用户名作为登录用户名
+          password: ${{ secrets.GITHUB_TOKEN }} # 使用内置的 GITHUB_TOKEN 作为登录密码
 
-      - name: Log in to GitHub Container Registry (GHCR)
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }} # 使用触发工作流的用户作为用户名
-          password: ${{ secrets.GITHUB_TOKEN }} # 使用内置的 GITHUB_TOKEN
-
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta # 为此步骤分配一个 ID，以便其他步骤可以引用其输出
+      - name: Extract metadata (tags, labels) for Docker # 步骤：提取 Docker 镜像的元数据（标签和标签）
+        id: meta # 为此步骤指定 ID，以便后续步骤可以引用其输出
         uses: docker/metadata-action@v5
         with:
-          # 定义镜像名称
+          # 定义要构建和推送的镜像名称
+          # 这里只保留了 ghcr.io 的镜像名称
           images: |
-            tbphp/gpt-load # 推送到 Docker Hub 的镜像名称
-            ghcr.io/${{ github.repository }} # 推送到 GitHub Container Registry 的镜像名称 (例如 ghcr.io/your-org/your-repo)
-          
+            ghcr.io/${{ github.repository }} # 格式为 ghcr.io/您的用户名或组织名/您的仓库名
+
           # 定义 flavor 规则
           # latest=false 表示我们不希望 metadata-action 自动生成 'latest' 标签
-          # 我们会在 tags 规则中手动控制 'latest' 标签的生成
+          # 而是在下面的 tags 规则中手动控制 'latest' 标签
           flavor: |
             latest=false
-          
+
           # 定义标签生成规则
-          # 每一行代表一个规则，metadata-action 会根据这些规则生成标签
-          # 确保缩进正确（通常比 'tags:' 多2个空格）
+          # 确保缩进正确，通常比 'tags:' 多2个空格
           tags: |
-            type=ref,event=tag # 为所有标签 (例如 v1.0) 生成对应的标签 (例如 v1.0)
-            # 如果标签以 '-beta' 结尾 (例如 v1.0-beta)，则生成一个 'beta' 标签
+            type=ref,event=tag # 根据 Git 标签（例如 v1.0）生成相应的 Docker 标签（v1.0）
+            # 如果 Git 标签以 '-beta' 结尾（例如 v1.0-beta），则生成一个名为 'beta' 的 Docker 标签
             type=raw,value=beta,enable=${{ endsWith(github.ref, '-beta') }}
-            # 如果标签不包含连字符 (例如 v1.0, 但不包括 v1.0-beta)，则生成一个 'latest' 标签
+            # 如果 Git 标签不包含连字符（通常表示一个稳定版本，例如 v1.0 而不是 v1.0-beta），则生成一个 'latest' 标签
             type=raw,value=latest,enable=${{ !contains(github.ref, '-') }}
 
-      - name: Build and push Docker image
-        id: build # 为此步骤分配一个 ID
+      - name: Build and push Docker image # 步骤：构建并推送 Docker 镜像
+        id: build # 为此步骤指定 ID
         uses: docker/build-push-action@v5
         with:
           context: . # Dockerfile 所在的路径，'.' 表示仓库根目录
-          platforms: linux/amd64,linux/arm64 # 定义构建的平台
-          push: true # 推送镜像到注册表
-          tags: ${{ steps.meta.outputs.tags }} # 使用 metadata-action 生成的标签
-          labels: ${{ steps.meta.outputs.labels }} # 使用 metadata-action 生成的标签
-          # 定义构建参数
+          platforms: linux/amd64,linux/arm64 # 构建多 CPU 架构的镜像
+          push: true # 将构建好的镜像推送到 GHCR
+          tags: ${{ steps.meta.outputs.tags }} # 使用上一步 metadata-action 生成的标签
+          labels: ${{ steps.meta.outputs.labels }} # 使用上一步 metadata-action 生成的标签
+          # 定义构建参数，将 Git 标签名作为 VERSION 传递给 Dockerfile（如果 Dockerfile 接受这个参数）
           build-args: |
-            VERSION=${{ github.ref_name }} # 将 Git 标签名作为 VERSION 编译参数传递给 Dockerfile
+            VERSION=${{ github.ref_name }}
