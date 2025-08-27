@@ -5,16 +5,6 @@
 
 set -e
 
-# Clean up queue state files for robustness
-QUEUE_STATE_DIR="data/queue_state"
-if [ -d "$QUEUE_STATE_DIR" ]; then
-    echo "Cleaning up old queue state files in $QUEUE_STATE_DIR..."
-    rm -f "$QUEUE_STATE_DIR"/*
-    echo "Old queue state files removed."
-else
-    echo "Queue state directory $QUEUE_STATE_DIR not found, skipping cleanup."
-fi
-
 # Create config if not exists and not running special commands
 if [ ! -f "$CONFIG_FILE" ] && [ "$1" != "--validate" ] && [ "$1" != "--create-config" ]; then
     echo "Config file '$CONFIG_FILE' not found, creating default configuration..."
